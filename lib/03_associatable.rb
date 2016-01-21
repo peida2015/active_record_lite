@@ -37,6 +37,7 @@ class HasManyOptions < AssocOptions
                     primary_key: :id,
                     class_name: "#{name}".camelize.singularize,
                 }
+# debugger if self_class_name == 'Human'
     defaults = defaults.merge(options)
     @foreign_key = defaults[:foreign_key]
     @primary_key = defaults[:primary_key]
@@ -48,28 +49,35 @@ module Associatable
   # Phase IIIb
 
   def belongs_to(name, options = {})
-    options = BelongsToOptions(name, options)
-    define_method :name do |options|
-      options.send(:foreign_key)
-      options.model_class
-      DBConnection.execute(<<-SQL)
-
-      SQL
+    # @assoc_options = @assoc_options || {}
+    self.assoc_options
+    @assoc_options[name] = BelongsToOptions.new(name, options)
+    # debugger
+    define_method name do
+      # debugger
+      f_key = self.send(self.class.assoc_options[name].foreign_key)
+      self.class.assoc_options[name].model_class.where(id: f_key).first
     end
-
-    end
-
   end
 
   def has_many(name, options = {})
     # ...
+
+    options_HM = HasManyOptions.new(name, self.to_s, options)
+# debugger
+    define_method name do
+      options_HM.model_class.where({options_HM.foreign_key => self.id})
+    end
   end
 
   def assoc_options
     # Wait to implement this in Phase IVa. Modify `belongs_to`, too.
+    attr_accessor :assoc_options
+    @assoc_options ||= {}
   end
 end
 
 class SQLObject
   # Mixin Associatable here...
+  extend Associatable
 end
